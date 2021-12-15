@@ -60,6 +60,8 @@ Om denna tråd kommer "joina" en annan tråd läggs den andra tråden på ready-
 */
 
 void green_thread() {
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
+  
   green_t* this = running;  // Hittar den kontext som är "running"
   void* result = (*this->fun)(this->arg);   // Kör funktionen och spara resultatet
   // Place waiting (joining) thread in ready queue
@@ -72,7 +74,6 @@ void green_thread() {
 
   green_t* next = dequeue_ready(); // Kör nästa tråd i kön
   running = next;
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
 }
 
 /*
@@ -81,7 +82,8 @@ Kopplar ihop green_t med dessa, fäster även en ny context till den och slutlig
 I princip hela denna funktion är given i instruktionerna
 */
 int green_create(green_t* new, void* (*fun)(void*), void* arg) {
-  //sigprocmask(SIG_BLOCK, &block, NULL);
+  sigprocmask(SIG_BLOCK, &block, NULL); // Borde antagligen skydda hela denna funktion, särskilt malloc
+
   ucontext_t* cntx = (ucontext_t*)malloc(sizeof(ucontext_t));
   getcontext(cntx);
 
@@ -101,8 +103,8 @@ int green_create(green_t* new, void* (*fun)(void*), void* arg) {
   new->zombie = FALSE;
 
   enqueue_ready(new);   // add new to the ready queue..
-
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
+  
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
   return 0;
 }
 /*
@@ -110,7 +112,7 @@ Slutar exekvera den nuvarande tråden, lägger den på ready-kön och börjar ex
 */
 
 int green_yield() {
-  //sigprocmask(SIG_BLOCK, &block, NULL);
+  sigprocmask(SIG_BLOCK, &block, NULL); // Vi börjar med att ändra ready-kön så allt borde skyddas
   
   green_t* susp = running;
   enqueue_ready(susp);  // Lägg till susp i ready kön
@@ -119,7 +121,7 @@ int green_yield() {
   running = next;  // Kör nästa tråd
   swapcontext(susp->context, next->context); 
  
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
   return 0;
 }
 /*
@@ -129,8 +131,8 @@ den nuvarande läggas på ready-kön (se green_thread).
 När thread har exekverat och joinat kommer den börja exekvera där den avslutade, i collect result delen nedan.
 */
 int green_join(green_t* thread, void** res) {
-  //sigprocmask(SIG_BLOCK, &block, NULL);
-
+  sigprocmask(SIG_BLOCK, &block, NULL); // Skydda allt
+  
   if(!thread->zombie) {
     green_t* susp = running;
     thread->join = susp; // Lägg till som joining thread i "thread"
@@ -139,7 +141,7 @@ int green_join(green_t* thread, void** res) {
     running = next;
     
     swapcontext(susp->context, next->context);
-    //sigprocmask(SIG_UNBLOCK, &block, NULL);  
+    sigprocmask(SIG_UNBLOCK, &block, NULL);
   }
   // Collect result
   res = thread->retval;  // Spara resultatet av join tråden i res-pekaren
@@ -147,7 +149,7 @@ int green_join(green_t* thread, void** res) {
   free(thread->context->uc_stack.ss_sp); // Deallokera allt minne thread har använt, den kommmer inte köras mer
   free(thread->context);
 
-  //   sigprocmask(SIG_UNBLOCK, &block, NULL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
   return 0;
 }
 
@@ -165,7 +167,7 @@ void green_cond_init(green_cond_t* new) {
 }
 // Lägg till running tråden i en lista
 void green_cond_wait(green_cond_t* cond) {
-  // sigprocmask(SIG_BLOCK, &block, NULL);
+   sigprocmask(SIG_BLOCK, &block, NULL);
   green_t* susp = running;    // Hitta running och lägg till den i listan
   
   green_t* index = cond->head; // Lägg til susp i "cond" listan
@@ -183,11 +185,11 @@ void green_cond_wait(green_cond_t* cond) {
   running = dequeue_ready();   // Kör nästa tråd
   swapcontext(susp->context, running->context);
 
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
 }
 // Tar ut en tråd ur listan och lägger den i ready-kön
 void green_cond_signal(green_cond_t* cond) {
-  // sigprocmask(SIG_BLOCK, &block, NULL);
+  sigprocmask(SIG_BLOCK, &block, NULL);
 
   green_t* index = cond->head;
   if(index == NULL) {
@@ -201,7 +203,7 @@ void green_cond_signal(green_cond_t* cond) {
   retval->next = NULL;
   enqueue_ready(retval);
 
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
 }
 
 /* Timer handler */
@@ -209,7 +211,6 @@ void green_cond_signal(green_cond_t* cond) {
 Denna funktion bestämmer vad som händer då timern varvar
 */
 void timer_handler(int sig) {
-  //printf("time\n");
   green_t* susp = running;
 
   // Add the running to the ready queue
