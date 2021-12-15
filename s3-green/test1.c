@@ -74,13 +74,14 @@ int main() {
   int a1 = 1;
   int a3 = 100000;
 
-  a_mutex = malloc(sizeof(green_mutex_t));
+  //  a_mutex = malloc(sizeof(green_mutex_t));
   
-  green_mutex_init(a_mutex);
+  //green_mutex_init(a_mutex);
   
   green_create(&g0, test, &a0);
   green_create(&g1, test, &a1);
-
+  printf("thread is running\n");
+  
   printf("test\n");
   green_join(&g0, NULL);
   printf("test2\n");

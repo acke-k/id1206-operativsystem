@@ -82,7 +82,7 @@ Kopplar ihop green_t med dessa, fäster även en ny context till den och slutlig
 I princip hela denna funktion är given i instruktionerna
 */
 int green_create(green_t* new, void* (*fun)(void*), void* arg) {
-  sigprocmask(SIG_BLOCK, &block, NULL); // Borde antagligen skydda hela denna funktion, särskilt malloc
+  sigprocmask(SIG_BLOCK, &block, NULL);
 
   ucontext_t* cntx = (ucontext_t*)malloc(sizeof(ucontext_t));
   getcontext(cntx);
@@ -139,7 +139,8 @@ int green_join(green_t* thread, void** res) {
     
     green_t* next = dequeue_ready(); // Kör nästa tråd
     running = next;
-
+    printf("Innan swapcontext i join\n");
+    sanity();
     swapcontext(susp->context, next->context);
     sigprocmask(SIG_UNBLOCK, &block, NULL);
   }
@@ -288,7 +289,7 @@ void sanity() {
   printf("ready q\n");
   green_t* index = ready_head;
   while(index != NULL) {
-    printf("i: %p\n", index);
+    printf("%p\n", index);
     index = index->next;
   }
   printf("done\n");
