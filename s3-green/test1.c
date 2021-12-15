@@ -5,9 +5,14 @@
 int flag = 0;
 volatile int counter;
 
+volatile int def_counter;
+
+int loops = 10000000;
+
 green_cond_t cond;
 
-green_mutex_t* a_mutex;
+green_mutex_t mutte;
+  green_mutex_t* a_mutex = &mutte;
 
 void* test(void* arg) {
   int i = *(int*)arg;
@@ -30,7 +35,7 @@ void* test_cond(void* arg) {
       flag = (id + 1) % 2;
       green_cond_signal(&cond);
     } else {
-      green_cond_wait(&cond);
+      green_cond_wait(&cond, NULL);
     }
   }
 }
@@ -51,12 +56,21 @@ void* timer_test(void* arg) {
 void* undefined_test(void* arg) {
   int id = *(int*)arg;
 
-  for(int i = 0; i < 100000; i++) {
+  for(int i = 0; i < loops; i++) {
       
     counter += 1;
-    printf("id %d\n", id);
   }
-  green_yield();
+  return 0;
+}
+
+void* defined_test(void* arg) {
+  int id = *(int*)arg;
+
+  for(int i = 0; i < loops; i++) {
+    green_mutex_lock(a_mutex);
+    def_counter += 1;
+    green_mutex_unlock(a_mutex);
+  }
   return 0;
 }
 
@@ -65,27 +79,34 @@ void* undefined_test(void* arg) {
 int main() {
   
   green_cond_init(&cond);
+  
+  green_mutex_init(a_mutex);
+  
 
   
-  green_t g0, g1;
-  printf("g0: %p\tg1: %p\n", &g0, &g1);
+  green_t g0, g1, g2, g3;
   
   int a0 = 0;
   int a1 = 1;
-  int a3 = 100000;
+  int a2 = 2;
+  int a3 = 3;
+  
+  green_create(&g0, defined_test, &a0);
+  green_create(&g1, defined_test, &a1);
 
-  //  a_mutex = malloc(sizeof(green_mutex_t));
+  green_create(&g2, undefined_test, &a2);
+  green_create(&g3, undefined_test, &a3);
+
   
-  //green_mutex_init(a_mutex);
-  
-  green_create(&g0, test, &a0);
-  green_create(&g1, test, &a1);
-  printf("thread is running\n");
-  
-  printf("test\n");
   green_join(&g0, NULL);
-  printf("test2\n");
   green_join(&g1, NULL);
+  green_join(&g2, NULL);
+  green_join(&g3, NULL);
+
+    printf("join was a success\n");
+  
+  printf("counter: %d\n", counter);
+  printf("defined counter: %d\n", def_counter);
   
   return 0;
   

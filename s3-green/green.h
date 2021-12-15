@@ -12,12 +12,14 @@ typedef struct green_t {
 
 // Kanske göra dummy här
 typedef struct green_cond_t {
-  green_t* head;
+  green_t* susp_list;
+  //green_t* head;
 } green_cond_t;
 
 typedef struct green_mutex_t {
   volatile int taken;
-  green_t* head;
+  green_t* susplist;
+  //green_t* head;
 } green_mutex_t;
 
 int green_mutex_init(green_mutex_t *mutex);
@@ -29,7 +31,7 @@ int green_yield();
 int green_join(green_t* thread, void** val);
 
 void green_cond_init(green_cond_t* new);
-void green_cond_wait(green_cond_t* thread);
+void green_cond_wait(green_cond_t* cond, green_mutex_t* mutex);
 void green_cond_signal(green_cond_t* thread);
 
 void sanity();
