@@ -1,9 +1,13 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include "green.h"
 
 int flag = 0;
+volatile int counter;
 
 green_cond_t cond;
+
+green_mutex_t* a_mutex;
 
 void* test(void* arg) {
   int i = *(int*)arg;
@@ -17,13 +21,9 @@ void* test(void* arg) {
 
 void* test_cond(void* arg) {
   int id = *(int*)arg;
-  int loop = 4 + id;
-  printf("loop: %d\n", loop);
-  
-  int i = 0;
+  int loop = 4;
 
   while(loop > 0) {
-    printf("\niteration: %d\n", i++);
     if(flag == id) {
       printf("thread %d: %d\n", id, loop);
       loop--;
@@ -47,6 +47,20 @@ void* timer_test(void* arg) {
     }
 }
 
+// Ett test där vår implementation ej fungerar
+void* undefined_test(void* arg) {
+  int id = *(int*)arg;
+
+  for(int i = 0; i < 100000; i++) {
+      
+    counter += 1;
+    printf("id %d\n", id);
+  }
+  green_yield();
+  return 0;
+}
+
+
 
 int main() {
   
@@ -55,13 +69,21 @@ int main() {
   
   green_t g0, g1;
   printf("g0: %p\tg1: %p\n", &g0, &g1);
-  int a0 = 0;
   
+  int a0 = 0;
   int a1 = 1;
-  green_create(&g0, timer_test, &a0);
-  green_create(&g1, timer_test, &a1);
+  int a3 = 100000;
 
+  a_mutex = malloc(sizeof(green_mutex_t));
+  
+  green_mutex_init(a_mutex);
+  
+  green_create(&g0, test, &a0);
+  green_create(&g1, test, &a1);
+
+  printf("test\n");
   green_join(&g0, NULL);
+  printf("test2\n");
   green_join(&g1, NULL);
   
   return 0;

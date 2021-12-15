@@ -139,13 +139,13 @@ int green_join(green_t* thread, void** res) {
     
     green_t* next = dequeue_ready(); // Kör nästa tråd
     running = next;
-    
+
     swapcontext(susp->context, next->context);
     sigprocmask(SIG_UNBLOCK, &block, NULL);
   }
   // Collect result
   res = thread->retval;  // Spara resultatet av join tråden i res-pekaren
-  
+
   free(thread->context->uc_stack.ss_sp); // Deallokera allt minne thread har använt, den kommmer inte köras mer
   free(thread->context);
 
@@ -211,6 +211,7 @@ void green_cond_signal(green_cond_t* cond) {
 Denna funktion bestämmer vad som händer då timern varvar
 */
 void timer_handler(int sig) {
+  sigprocmask(SIG_BLOCK, &block, NULL);
   green_t* susp = running;
 
   // Add the running to the ready queue
@@ -219,12 +220,67 @@ void timer_handler(int sig) {
   // find the next thread for execution
   green_t* next = dequeue_ready();
   running = next;
-
-  //sigprocmask(SIG_BLOCK, &block, NULL);
+  
   swapcontext(susp->context, next->context);
-  //sigprocmask(SIG_UNBLOCK, &block, NULL);
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
 }
 
+/* Mutex */
+
+int green_mutex_init(green_mutex_t* mutex) {
+  mutex->taken = FALSE;
+  mutex->head = NULL;
+}
+/*
+Försöker ta låset. 
+Om det är låst suspendas tråden och väcks när låset är ledigt.
+*/
+int green_mutex_lock(green_mutex_t* mutex) {
+    sigprocmask(SIG_BLOCK, &block, NULL);
+    printf("LOCK \n");
+
+    green_t* susp = running;
+    // Om mutex är låst, suspenda tråden
+    if(mutex->taken) {
+      if(mutex->head == NULL) {
+	mutex->head = susp;
+      } else {
+	green_t* index = mutex->head;
+	while(index->next != NULL) {
+	  index = index->next;
+	}
+	index->next = susp;
+      }
+      susp->next = NULL;
+    
+      // Starta nästa tråd i ready-kön
+      green_t* next = dequeue_ready();
+      running = next;
+      swapcontext(susp->context, next->context);
+    } else {
+      mutex->taken = TRUE; // Om Låset är ledigt, ta det
+    }
+    sigprocmask(SIG_UNBLOCK, &block, NULL);
+    return 0;
+}
+/*
+Låser upp ett lås och låter en annan process ta det om den väntar.
+*/
+int green_mutex_unlock(green_mutex_t* mutex) {
+  sigprocmask(SIG_BLOCK, &block, NULL);
+  printf("UNLOCK\n");
+
+  if(mutex->head != NULL) {
+    green_t* queuethis = mutex->head;
+    mutex->head = mutex->head->next;
+    queuethis->next = NULL;
+    enqueue_ready(queuethis);
+  } else {
+    mutex->taken = FALSE;
+  }
+  sigprocmask(SIG_UNBLOCK, &block, NULL);
+  return 0;
+}
 /* Sanity */
 
 void sanity() {
