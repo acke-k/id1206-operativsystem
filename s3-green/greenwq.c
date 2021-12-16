@@ -143,54 +143,60 @@ Wait lägger till en tråd i listan och signal poppar en till ready-kön.
 void green_cond_init(green_cond_t* new) {
   new->susp_list = NULL;
 }
+
+/*
+Tar in en cond struct och en mutex struct.
+Tråden som körs ska vänta i cond->susplist tills mutex är ledig
+I princip, om vi anger en mutex i argumentet blir detta som att anropa:
+mutex_unlock(mutex);
+cond_wait(&cond);
+mutex_lock(mutex);
+ */
 // Lägg till running tråden i en lista
 void green_cond_wait(green_cond_t* cond, green_mutex_t *mutex) {
   sigprocmask(SIG_BLOCK, &block, NULL);
+  
   green_t* susp = running;    // Hitta running och lägg till den i listan
-  printf("queue before add\n");
-  printqueue(cond->susp_list);
   queue_add(susp, &(cond->susp_list));
-  printf("aftwewards:\n");
-  printqueue(cond->susp_list);
-  /*
-  // Om mutex existerar
-  // Alltså: Om vi angav mutex i argumentet kommer vi släppa en suspendad i den mutexen
-  // och ge den låset. Detta görs tills mutexen är tom
+  
   if(mutex != NULL) {
-    if(mutex->head != NULL) {
-      green_t* desusp = mutex->head;
-      mutex->head = mutex->head->next;
-      desusp->next = NULL;
-      enqueue_ready(desusp);
-
-      mutex->taken = FALSE;
+        mutex->taken = FALSE;
+    if(mutex->susplist != NULL) {
+      green_t* dqueue = queue_rem(&(mutex->susplist));
+      queue_add(dqueue, &readyq);
     }
   }
-  */
-  running = queue_rem(&readyq);
-  swapcontext(susp->context, running->context);
-  /*
+  green_t* next = queue_rem(&readyq);
+  running = next;
+  
+  swapcontext(susp->context, next->context);
+  
   // Nu är vi tillbaka till den tråden som suspenderades
   if(mutex != NULL) {
-    // try o take the lock
+    // Försök ta låset (samma som i green_mutex_lock)
     if(mutex->taken) {
-      
+      queue_add(susp, &(mutex->susplist));   
+      green_t* next = queue_rem(&readyq);     // Starta nästa tråd i ready-kön
+      running = next;
+      swapcontext(susp->context, next->context);
     } else {
-      // take the lock
+      // Om låset är ledigt, ta det
       mutex->taken = TRUE;
     }
   }
-  */
+  
   sigprocmask(SIG_UNBLOCK, &block, NULL);
   return;
 }
-// Tar ut en tråd ur listan och lägger den i ready-kön
+// Tar ut en tråd ur väntlistan (om det finns en)  och lägger den i ready-kön
 void green_cond_signal(green_cond_t* cond) {
   sigprocmask(SIG_BLOCK, &block, NULL);
-  
-  green_t* desusp = queue_rem(&(cond->susp_list));
-  queue_add(desusp, &readyq);
 
+  if(cond->susp_list != NULL) {
+    green_t* desusp = queue_rem(&(cond->susp_list));
+    queue_add(desusp, &readyq);
+    }
+  
   sigprocmask(SIG_UNBLOCK, &block, NULL);
 }
 
@@ -225,7 +231,7 @@ int green_mutex_lock(green_mutex_t* mutex) {
 
   green_t* susp = running;
   // Om mutex är låst, suspenda tråden
-  if(mutex->taken) {
+  if(mutex->taken == TRUE) {
     queue_add(susp, &(mutex->susplist));   
 
     green_t* next = queue_rem(&readyq);     // Starta nästa tråd i ready-kön
@@ -319,6 +325,9 @@ green_t* queue_rem(green_t** queue) {
   green_t* retval = *queue;
   if(retval == NULL) {
     printf("attempted to pop an empty queue\n");
+    printf("queue address: %p\n", &queue);
+    printf("readyq: %p\n", readyq);
+    
   }
   *queue = retval->next;
   retval->next = NULL;

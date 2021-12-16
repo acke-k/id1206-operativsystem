@@ -1,0 +1,192 @@
+/* Maybe change the size of these variables in the future to reduce overhead or
+   increase performance */
+struct head {
+  uint16_t bfree; // Is the block before free?
+  uint16_t bsize; // The size of the block before
+  uint16_t free;  // Is this block free?
+  uint16_t size;  // The size of this block
+  struct head *prev;  // The previous block in the list
+  struct head *next;  // The next block in the list
+};
+
+#define TRUE 1
+#define FALSE 0
+
+#define HEAD (sizeof(struct head)) // For now, 24 bytes
+#define MIN(size) (((size) > (8))?(size):(8)) // Smallest size that a block can be, 8 bytes for now
+#define LIMIT(size) (MIN(0) + HEAD + size)  // A block cannot be split if it is smaller than this
+#define MAGIC(memory) ((struct head*)memory - 1)  // Retrive the head of a block
+#define HIDE(block) (void*)((struct head*)block + 1) // Hide the head of a block
+
+#define ALIGN 8 // Since we are using a 64 bit processor
+#define ARENA (64*1024)  // The block we start out with, i.e. the size of the heap
+
+/* BLOCK LOGIC */
+
+// Takes in a pointer to a block and returns a pointer to the next/previous block
+struct head *after(struct head *block) {
+  return (struct head*)((char*)(block + (block->size) + HEAD));
+}
+struct head *before(struct head *block) {
+    return (struct head*)((char*)(block - (block->size) - HEAD));
+}
+   
+
+struct head *split(struct head *block, int size) {
+  int rsize = block->size - HEAD - size;  // calculate how much space will remain in the given block
+  block->size = rsize;
+
+  struct head *splt = HIDE(block) + rsize; // Find where the new block will begin
+  splt->bsize = rsize;
+  splt->bfree = block->free;
+  splt->size = size;
+  splt->free = TRUE;  // Should this be initialized as true or false after splitting?
+
+  struct head *aft = after(splt);
+  aft->bsize = size;
+
+  return splt;
+
+  // NOTE: why aren't we typing block->next = splt ?
+  // We'll do it later, just return the split block for now
+}
+
+// Creating the initial memory which we can use
+  
+struct head *arena = NULL;
+struct head *new() {
+  if(arena != NULL) {
+    printf("one arena already allocated\n");
+    return NULL;
+  }
+  struct head *new = mmap(NULL, ARENA, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+
+  if(new == MAP_FAILED) {
+    printf("mmap failed: error %d\n", errno);
+    return NULL;
+  }
+
+/* Setting up the heap */
+
+  uint size = ARENA - 2*HEAD; 
+  // Make it so that we can not merge out of the arena through the beginning
+  new->bfree = FALSE;
+  new->bsize = 0;
+  new->free = TRUE;
+  new->size = size;
+
+  struct head *sentinel = after(new);
+
+  // Make so that we can not merge out of the arena through the end
+  sentinel->bfree = TRUE;
+  sentinel->bsize = new->size;
+  sentinel->free = FALSE;
+  sentinel->size = 0;
+
+  arena = (struct head*)new;
+
+  return new;
+}
+
+// Freelist is a double linked list using flist as a head element.
+struct head* flist;
+
+// Detach a block, i.e. remove it(?) Should it be returned somewhere?
+void detach(struct head *block) {
+  // If the block is not the last element in the list
+  if (block->next != NULL) {
+    (block->prev)->next = block->next;
+  }
+  // If the block isn't the first element in the list
+  if (block->prev != NULL) {
+    (block->next)->prev = block->prev;
+  }
+  // If the block is the first element in the list
+  else {
+    flist = (block->next);
+  }
+  return;
+}
+
+// Insert a new block into the front of the list
+void insert(struct head *block) {
+  block->next = flist;
+  block->prev = NULL;
+  if (flist != NULL) {  // If the list isn't empty
+    (block->nex)->prev = block;
+  }
+  flist = block;
+}
+
+/* Malloc & free implementation  */
+
+// Take an integer and return the closest multiple of ALIGN, rounded upwards
+int adjust(size_t request) {
+  if (((request + ALIGN - 1) & (ALIGN * -1)) < MIN(0)) {
+    return MIN(0);
+  } else {
+    return ((request + ALIGN - 1) & (ALIGN * -1));
+  }
+}
+// Find an appropiate block in freelist using the take first algorithm
+struxt head* find(size_t size) {
+  // If we do not have an arena, create one
+  if(flist == NULL) {
+    flist = new();
+  }
+  
+  struct head *index = flist;
+  // Take first algorithm
+  while(index != NULL) { // Iterate through flist
+    // Can we split the current block? If yes, choose this block
+    if(index->size >= LIMIT(size)) {
+      // Detach the block, split it, and insert the leftover
+      detach(index);
+      struct head* new_block = split(index, size);
+      if(index->size != 0) {
+	insert(index);
+      }
+      // Make sure that the header of the new block is correct
+      new_block->free = FALSE;
+      after(new_block)->bfree = FALSE;
+      return new_blocK;
+    }
+  }
+  // If we cannot find a large enough block
+  return NULL;
+}
+// My own version of malloc
+void *dalloc(size_t request) {
+  if(request <= 0) {
+    return NULL;
+  }
+  int size = adjust(request);
+  struct head *taken = find(size);
+  if (taken == NULL) {
+    return NULL;
+  } else {
+    return HIDE(taken);
+  }
+}
+// My own version of free
+void dfree(void *memory) {
+  if(memory != NULL) {
+    struct head *block = MAGIC(memory);
+
+    struct head *aft = after(block);
+    block->free = TRUE;
+    aft->bfree = TRUE;
+    insert(block);
+  }
+  return;
+}
+
+void sanity() {
+  // Check if the headers are correct
+  struct head* index = arena;
+  int before = before(index);
+  int after = after(index);
+  int current = index;
+
+  printf("before = %p, current = %p, after = %p\n", before, current, after);
+  

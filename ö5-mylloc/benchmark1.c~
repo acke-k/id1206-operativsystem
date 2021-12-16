@@ -1,0 +1,37 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define ROUNDS 100 
+#define LOOPS 100000
+
+int main()
+{
+  void *init = sbrk(0);
+  void *current;
+
+  printf("Ursprungliga toppen av heapen: %p\n", init);
+
+  for(int j = 0; j < ROUNDS; j++)
+    {
+      for(int i = 0; i < LOOPS; i++)
+	{
+	  size_t size = (rand() % 4000) + sizeof(int);
+	  int *memory;
+	  memory = malloc(size);
+	  if(memory == NULL)
+	    {
+	      fprintf(stderr, "malloc failed\n");
+	      return(1);
+	    }
+	  *memory = 123;  // Vad händer här????
+	  free(memory);
+	}
+      current = sbrk(0);
+      int allocated = (int)((current - init) / 1024);
+      printf("%d\n", j);
+      printf("Den nuvarande toppen av heapen: %p\n", current);
+      printf("  increased by %d Kbyte\n", allocated);
+    }
+  return 0;
+}

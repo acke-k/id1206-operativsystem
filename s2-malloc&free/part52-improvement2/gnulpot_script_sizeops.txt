@@ -1,0 +1,14 @@
+set terminal png
+set termoption enhanced
+
+set output "part5_block_op.png"
+
+set title ""
+
+set key left center
+
+set xlabel "antal operationer"
+
+set ylabel "Medellängd av fria block"
+
+plot "part5.dat" u 1:2 w linespoints title "storlek/operation"

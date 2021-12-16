@@ -1,0 +1,77 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\graphicspath{ {./graphs/} }
+\graphicspath{ {./code/} }
+
+
+\title{\textbf{Operativsystem ID1206} \\ 
+\textbf{Malloc \& Free}}
+
+\author{Axel Karlsson}
+
+\begin{document}
+
+\maketitle
+\textbf
+{\\\\Inledning\\\\}
+Denna rapport är skriven i syfte av att redovisa mitt arbete för seminariumsuppgift två, Malloc \& Free, i kursen ID1206 Operativsystem. Den givna uppgiften var att implementera en egen version av C funktionerna malloc och free, vars funktion är att hantera det dynamiska minnet (== heapen?) i en process. I den första delen av labben har jag implemneterat den givna versionen av malloc och free (hänvisas framöver till som malloc), som har namnet dalloc och dfree för att ej blanda ihop dem med C funktionerna. I den andra delen har jag implementerat en egen förbättring av dalloc och free, där jag har implementerat flera freelists.
+
+\maketitle
+\textbf
+{\\\\Rapportdelen\\\\}
+I denna del ges en sammanfattning av den uppgift jag har löst samt en genomgång av min lösning.
+
+
+\maketitle
+\textbf
+    {\\\\Vad är problemet\\\\}
+    Den största utmaningen med att implementera malloc är att hantera 'freelist'. Vi allokerar minne på heapen med hjälp av mmap(), men detta är ett systemanrop och är därför dyrt. För att undvika att anropa mmap() i största mån skapar vi funktionen malloc, som 'reserverar' allokerar en stor minnesarea med mmap() och delar ut den i processen. På detta sätt kan vi alltså dela ut minne på heapen utan ett systemanrop. \\
+    Det minne malloc reseverar lagras internt i en så kallad freelist, som vi sedan delar ut inom processen. Hur denna freelist är implementerad är hjärtat i denna uppgift.
+
+%kanske ha figur här?
+
+\maketitle
+\textbf
+    {\\\\Den givna implementationen\\\\}
+    I den givna implementationen av malloc lagras fria block i en dubbellänkad lista kallad flist. Det finns även en api i form av ett flertal funktioner, bland andra dalloc och dree, som tillsammans lägger till och tar bort element i denna lista likt malloc. \\
+    Den största svårigheten med denna del var att implementera funktionerna adjust() och find(), då de ej var givna i labbbeskrivningen. 
+
+\maketitle
+\textbf
+    {\\\\Benchmarks\\\\}
+    sdfdsf
+    
+
+
+\maketitle
+\textbf
+    {\\\\Förbättringar\\\\}
+    Det fanns flera förslag på förbättringar som kunde göras på den givna implementationen. Jag valde att skapa flera freelists. Min implementation bygger på en global array flists[], i vars index det finns dubbellänkade listor med fria block av storlek från 8 till 128 byte, med ett index för block av större storlek. Jag har även modifierat funktionerna dalloc och free. Den största förändringen är funktionen find, som nu hämtar block från flists[]. Vi kan då i många fall undvika att kalla split (om storleken på det efterfrågade minnet är minder än 128 byte) och därmed är det mycket enklare att dela ut och samla in block av olika storlek (färre operationer).
+
+\maketitle
+\textbf
+    {\\\\Min implementation\\\\}
+    Ha lite bilder och shit här + förklara
+
+\maketitle
+\textbf
+    {\\\\Benchmarks\\\\}
+    Mer bilder + beskri benchmark
+    
+\maketitle
+\textbf
+    {\\\\Sammanfattning\\\\}
+    Gå igenom resulaten, dra slutsants
+
+\maketitle
+\textbf
+    {\\\\Ytterligare optimisering\\\\}
+    Skriv lite mer, t.ex. kan vi nu göra header mindre och skriva om vissa funktioner. Om man byggde programmet från grunde upp skulle det kunna vara mer optimerat
+
+\maketitle
+\textbf
+{\\\\Slutsats\\\\}
+This work has focused on implementing the memory allocation library functions dalloc( ) and dfree( ). Two different implementations were covered, one with an unordered list of free blocks and one where the list was sorted. Two different benchmarks were performed on each implementations which show that the best performing version was the one with the unordered list. This is probably due to external fragmentation as well as the extra work it takes in order to sort the list. However, there exists several optimizations that can be evaluated in future work. 
+
+\end{document}

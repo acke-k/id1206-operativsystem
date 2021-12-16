@@ -1,0 +1,22 @@
+Jag tycker att rapporten kunde har varit något längre och förklarat med på djupet om vad problemet är och hur vi löser det. Jag tycker det känns som att rapporten antar att jag har gjort och löst uppgiften själv, och det är kanske inte nödvändigtvis ett misstag så får jag inte riktigt intrycket av att Jesper har förstått hela uppgiften. T.ex. så tror jag det hade varit snyggt att i del 2 ha en mer grundlig beskrivning av hur malloc och free är implementerad (t.ex. så nämns mman aldrig i rapporten). Det känns som att istället för att beskriva hur du implementerade malloc så antar du att det endast finns ett sätt att implementera malloc, t.ex. att arena är en självklar del av ett program. 
+
+Sum: Det kanske hade varit bättre att lägga mer vikt på den stora bilden och beskriva hur dessa funktioner fungerar tillsammans, istället för att beskriva dem var för sig. 
+
+Jag tycker att tabbellerna hade kunnat göras på ett bättre sätt. De innehåller väldigt mycket text och få bilder, vilket gör att man inte riktigt kan få en snabb översikt av det du har mätt. Det är även väldigt mycket data i tabbellerna som inte känns helt relevant till texten, t.ex. så har du i tabell 1 och 2 kolumner för "biggest" och "smallest", som du sedan ej nämner i texten förens tabell 3 som inte har dessa data.
+
+BRA:
+	Grundligt förklarat i del 2.
+	Har gjort relevanta mätningar och tolkat dem.
+	
+Kan förbättras:
+	Grafer skulle kunna vara bättre (mer bilder, mindre information)
+	hade kunnat tolka mätningarna mer. Varför når blocken "equila"?
+	Del 4 var lite väl skral.
+	
+	
+Jag tycker att din rapport är bra skriven överlag. 
+I del 1 och 2 förklarar du problemet och lösningen på ett grundligt sätt. Jag hade gillat om du hade haft bilder eller kodexempel (t.ex. koden för header) så det hade varit lättare att förstå det du beskriver, men överlag så var det bra.
+
+I del 3 så tycker jag att du har gjort ett bra jobb förutom hur graferna ser ut. Du har gjort relevanta mätningar och tolkat dem (det du skriver om "equilibrium") men graferna innehåller väldigt mycket text och få bilder. Jag tror att du kan tänka på om all data verkligen är relevant för diskussionen, t.ex. så har du med "biggest" och "smallest" i tabell ett och två men nämner inte dem i texten förens tabell tre.
+
+Del 4 är lite kort men det tror jag att du också inser.

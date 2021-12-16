@@ -1,0 +1,12 @@
+ou know that an execution context consists of a heap, a stack, co de, an
+instruction p ointer, registers etc
+
+n this assignment we will only deal with the things
+that are sp ecic for an execution i.e. the stack and instruction p ointer.
+
+Syfte: Vad är en execution context i ucontext? Vilka procedurer finns?
+
+context:
+	Sparar stack & ip* i en kontext (struct). Vi kan sedan hoppa tillbaka
+	till dessa. Som quicksave. Tänk på att dessa grejer sparas när vi
+	skapar ucontext-variablen (det är där vi "sparar").
